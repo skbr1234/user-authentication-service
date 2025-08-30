@@ -11,15 +11,12 @@ const app = express();
 // Security middleware
 app.use(helmet());
 
-// CORS configuration for frontend
+// CORS - Allow everything for development
 app.use(cors({
-  origin: [
-    '*', // Allow all origins for development; restrict in production
-    config.clientUrl,
-  ],
+  origin: '*',
   credentials: true,
-  methods: ['*'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  methods: '*',
+  allowedHeaders: '*',
 }));
 
 // Rate limiting
