@@ -190,7 +190,7 @@
 	"variable": [
 		{
 			"key": "baseUrl",
-			"value": "http://localhost:3000",
+			"value": "https://user-authentication-service-idnv.onrender.com",
 			"type": "string"
 		},
 		{
