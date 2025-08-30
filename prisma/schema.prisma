@@ -1,0 +1,59 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  passwordHash  String?
+  firstName     String?
+  lastName      String?
+  isVerified    Boolean   @default(false)
+  provider      String    @default("email") // email, google, apple
+  providerId    String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  tokens        Token[]
+  loginAttempts LoginAttempt[]
+  
+  @@map("users")
+}
+
+model Token {
+  id        String    @id @default(cuid())
+  token     String    @unique
+  type      TokenType
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime  @default(now())
+  
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("tokens")
+}
+
+model LoginAttempt {
+  id         String   @id @default(cuid())
+  email      String
+  userId     String?
+  ipAddress  String
+  userAgent  String?
+  success    Boolean
+  createdAt  DateTime @default(now())
+  
+  user       User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("login_attempts")
+}
+
+enum TokenType {
+  EMAIL_VERIFICATION
+  PASSWORD_RESET
+  REFRESH_TOKEN
+}
