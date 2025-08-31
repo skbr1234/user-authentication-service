@@ -7,6 +7,8 @@
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
     "build": "tsc && npx prisma generate",
     "start": "node dist/server.js",
+    "postdeploy": "npx prisma migrate deploy",
+    "db:deploy": "prisma migrate deploy",
     "test": "jest",
     "test:watch": "jest --watch",
     "lint": "eslint src/**/*.ts",
