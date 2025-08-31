@@ -21,11 +21,11 @@ class EmailService {
     const mailOptions = {
       from: process.env.SMTP_USER,
       to: email,
-      subject: 'Verify Your Email - PropertyVista Flow',
+      subject: 'Verify Your Email - MyGolya',
       html: `
         <div style="max-width: 600px; margin: 0 auto; padding: 20px; font-family: Arial, sans-serif;">
           <h2 style="color: #333; text-align: center;">Verify Your Email Address</h2>
-          <p>Thank you for registering with PropertyVista Flow!</p>
+          <p>Thank you for registering with MyGolya!</p>
           <p>Please click the button below to verify your email address:</p>
           <div style="text-align: center; margin: 30px 0;">
             <a href="${verificationUrl}" 
@@ -51,11 +51,11 @@ class EmailService {
     const mailOptions = {
       from: process.env.SMTP_USER,
       to: email,
-      subject: 'Reset Your Password - PropertyVista Flow',
+      subject: 'Reset Your Password - MyGolya',
       html: `
         <div style="max-width: 600px; margin: 0 auto; padding: 20px; font-family: Arial, sans-serif;">
           <h2 style="color: #333; text-align: center;">Reset Your Password</h2>
-          <p>You requested to reset your password for PropertyVista Flow.</p>
+          <p>You requested to reset your password for MyGolya.</p>
           <p>Please click the button below to reset your password:</p>
           <div style="text-align: center; margin: 30px 0;">
             <a href="${resetUrl}" 
