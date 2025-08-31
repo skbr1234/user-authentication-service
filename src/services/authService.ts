@@ -1,13 +1,13 @@
 import prisma from '../config/database';
 import { hashPassword, comparePassword } from '../utils/password';
-import { generateToken } from '../utils/jwt';
+import { generateToken, generateRefreshToken } from '../utils/jwt';
 import { RegisterRequest, LoginRequest, AuthResponse, PasswordResetConfirm } from '../types/auth';
 import { TokenType } from '@prisma/client';
 import crypto from 'crypto';
 
 class AuthService {
   async register(userData: RegisterRequest): Promise<{ user: any }> {
-    const { email, password, firstName, lastName } = userData;
+    const { email, password, firstName, lastName, phone, role } = userData;
 
     // Check if user exists
     const existingUser = await prisma.user.findUnique({
@@ -28,12 +28,16 @@ class AuthService {
         passwordHash,
         firstName,
         lastName,
+        phone,
+        role: role === 'buyer_renter' ? 'BUYER_RENTER' : 'SELLER_LANDLORD',
       },
       select: {
         id: true,
         email: true,
         firstName: true,
         lastName: true,
+        phone: true,
+        role: true,
         isVerified: true,
         createdAt: true,
       }
@@ -57,11 +61,21 @@ class AuthService {
   }
 
   async login(loginData: LoginRequest): Promise<AuthResponse> {
-    const { email, password } = loginData;
+    const { email, password, rememberMe = false } = loginData;
 
     // Find user
     const user = await prisma.user.findUnique({
-      where: { email }
+      where: { email },
+      select: {
+        id: true,
+        email: true,
+        passwordHash: true,
+        firstName: true,
+        lastName: true,
+        phone: true,
+        role: true,
+        isVerified: true,
+      }
     });
 
     if (!user || !user.passwordHash) {
@@ -74,11 +88,14 @@ class AuthService {
       throw new Error('Invalid email or password');
     }
 
-    // Generate JWT token
-    const token = generateToken({
+    // Generate JWT tokens
+    const payload = {
       userId: user.id,
       email: user.email,
-    });
+    };
+
+    const token = generateToken(payload, rememberMe);
+    const refreshToken = generateRefreshToken(payload);
 
     return {
       user: {
@@ -86,9 +103,12 @@ class AuthService {
         email: user.email,
         firstName: user.firstName || undefined,
         lastName: user.lastName || undefined,
+        phone: user.phone || undefined,
+        role: user.role === 'BUYER_RENTER' ? 'buyer_renter' : 'seller_landlord',
         isVerified: user.isVerified,
       },
       token,
+      refreshToken,
     };
   }
 

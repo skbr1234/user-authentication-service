@@ -13,6 +13,8 @@ model User {
   passwordHash  String?
   firstName     String?
   lastName      String?
+  phone         String?
+  role          UserRole  @default(BUYER_RENTER)
   isVerified    Boolean   @default(false)
   provider      String    @default("email") // email, google, apple
   providerId    String?
@@ -56,4 +58,9 @@ enum TokenType {
   EMAIL_VERIFICATION
   PASSWORD_RESET
   REFRESH_TOKEN
+}
+
+enum UserRole {
+  BUYER_RENTER
+  SELLER_LANDLORD
 }

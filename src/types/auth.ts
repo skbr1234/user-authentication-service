@@ -1,13 +1,16 @@
 export interface RegisterRequest {
   email: string;
   password: string;
-  firstName?: string;
-  lastName?: string;
+  firstName: string;
+  lastName: string;
+  phone?: string;
+  role: 'buyer_renter' | 'seller_landlord';
 }
 
 export interface LoginRequest {
   email: string;
   password: string;
+  rememberMe?: boolean;
 }
 
 export interface JwtPayload {
@@ -23,9 +26,12 @@ export interface AuthResponse {
     email: string;
     firstName?: string;
     lastName?: string;
+    phone?: string;
+    role?: string;
     isVerified: boolean;
   };
   token: string;
+  refreshToken?: string;
 }
 
 export interface PasswordResetRequest {
