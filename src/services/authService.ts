@@ -3,6 +3,7 @@ import { hashPassword, comparePassword } from '../utils/password';
 import { generateToken, generateRefreshToken } from '../utils/jwt';
 import { RegisterRequest, LoginRequest, AuthResponse, PasswordResetConfirm } from '../types/auth';
 import { TokenType } from '@prisma/client';
+import { emailService } from './emailService';
 import crypto from 'crypto';
 
 class AuthService {
@@ -54,8 +55,13 @@ class AuthService {
       }
     });
 
-    // TODO: Send verification email
-    console.log(`Verification token for ${email}: ${verificationToken}`);
+    // Send verification email
+    try {
+      await emailService.sendVerificationEmail(email, verificationToken);
+    } catch (error) {
+      console.error('Failed to send verification email:', error);
+      // Continue with registration even if email fails
+    }
 
     return { user };
   }
@@ -159,8 +165,13 @@ class AuthService {
       }
     });
 
-    // TODO: Send reset email
-    console.log(`Password reset token for ${email}: ${resetToken}`);
+    // Send reset email
+    try {
+      await emailService.sendPasswordResetEmail(email, resetToken);
+    } catch (error) {
+      console.error('Failed to send password reset email:', error);
+      // Don't throw error to avoid revealing if email exists
+    }
   }
 
   async resetPassword(resetData: PasswordResetConfirm): Promise<void> {
