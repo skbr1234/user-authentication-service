@@ -1,3 +1,5 @@
+import { logger } from '../utils/logger';
+
 interface EmailTranslations {
   verification: {
     subject: string;
@@ -64,25 +66,47 @@ const translations: Record<string, EmailTranslations> = {
 
 class TranslationService {
   getEmailTranslations(locale: string = 'en'): EmailTranslations {
-    return translations[locale] || translations.en;
+    logger.debug('Getting email translations', { locale, available: Object.keys(translations) });
+    
+    const translation = translations[locale] || translations.en;
+    const usedLocale = translations[locale] ? locale : 'en';
+    
+    if (usedLocale !== locale) {
+      logger.warn('Requested locale not available, falling back to English', {
+        requestedLocale: locale,
+        usedLocale,
+        availableLocales: Object.keys(translations)
+      });
+    }
+    
+    return translation;
   }
 
   detectLocaleFromEmail(email: string): string {
+    logger.debug('Detecting locale from email', { email });
+    
     // Simple heuristic - could be enhanced with user preferences from DB
     const domain = email.split('@')[1]?.toLowerCase();
     
+    logger.debug('Extracted domain for locale detection', { domain });
+    
     // Arabic domains
-    if (domain?.includes('.sa') || domain?.includes('.ae') || domain?.includes('.eg') || 
-        domain?.includes('.jo') || domain?.includes('.lb') || domain?.includes('.sy') ||
-        domain?.includes('.iq') || domain?.includes('.kw') || domain?.includes('.qa') ||
-        domain?.includes('.bh') || domain?.includes('.om') || domain?.includes('.ye') ||
-        domain?.includes('.ly') || domain?.includes('.dz') || domain?.includes('.ma') ||
-        domain?.includes('.tn') || domain?.includes('.sd')) {
+    const arabicDomains = ['.sa', '.ae', '.eg', '.jo', '.lb', '.sy', '.iq', '.kw', '.qa', '.bh', '.om', '.ye', '.ly', '.dz', '.ma', '.tn', '.sd'];
+    const isArabicDomain = arabicDomains.some(arabicDomain => domain?.includes(arabicDomain));
+    
+    if (isArabicDomain) {
+      logger.debug('Arabic locale detected from domain', { domain, detectedLocale: 'ar' });
       return 'ar';
     }
     
+    logger.debug('Default English locale used', { domain, detectedLocale: 'en' });
     return 'en'; // Default to English
   }
 }
 
 export const translationService = new TranslationService();
+
+logger.info('Translation service initialized', {
+  supportedLocales: Object.keys(translations),
+  defaultLocale: 'en'
+});
