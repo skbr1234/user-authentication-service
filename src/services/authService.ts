@@ -16,21 +16,21 @@ class AuthService {
       email,
       role,
       hasPhone: !!phone,
-      operationId
+      operationId,
     });
 
     try {
       // Check if user exists
       logger.debug('Checking for existing user', { email, operationId });
       const existingUser = await prisma.user.findUnique({
-        where: { email }
+        where: { email },
       });
 
       if (existingUser) {
         logger.warn('Registration attempt with existing email', {
           email,
           existingUserId: existingUser.id,
-          operationId
+          operationId,
         });
         throw new Error('User already exists with this email');
       }
@@ -39,73 +39,96 @@ class AuthService {
       logger.debug('Hashing password', { operationId });
       const passwordHash = await hashPassword(password);
 
-      // Create user
-      logger.debug('Creating user in database', { email, role, operationId });
-      const user = await prisma.user.create({
-        data: {
-          email,
-          passwordHash,
-          firstName,
-          lastName,
-          phone,
-          role: role === 'buyer_renter' ? 'BUYER_RENTER' : 'SELLER_LANDLORD',
-        },
-        select: {
-          id: true,
-          email: true,
-          firstName: true,
-          lastName: true,
-          phone: true,
-          role: true,
-          isVerified: true,
-          createdAt: true,
-        }
+      // Create user and verification token in transaction
+      logger.debug('Creating user and verification token in database', {
+        email,
+        role,
+        operationId,
+      });
+      const verificationToken = crypto.randomBytes(32).toString('hex');
+
+      const result = await prisma.$transaction(async (tx) => {
+        // Create user
+        const user = await tx.user.create({
+          data: {
+            email,
+            passwordHash,
+            firstName,
+            lastName,
+            phone,
+            role: role === 'buyer_renter' ? 'BUYER_RENTER' : 'SELLER_LANDLORD',
+          },
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+            phone: true,
+            role: true,
+            isVerified: true,
+            createdAt: true,
+          },
+        });
+
+        logger.debug('User created in transaction', {
+          userId: user.id,
+          email: user.email,
+          role: user.role,
+          operationId,
+        });
+
+        // Create verification token
+        const tokenRecord = await tx.token.create({
+          data: {
+            token: verificationToken,
+            type: TokenType.EMAIL_VERIFICATION,
+            userId: user.id,
+            expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
+          },
+        });
+
+        logger.debug('Token created in transaction', {
+          tokenId: tokenRecord.id,
+          token: verificationToken,
+          userId: user.id,
+          expiresAt: tokenRecord.expiresAt,
+          operationId,
+        });
+
+        return { user, tokenRecord };
       });
 
-      logger.info('User created successfully', {
+      const { user, tokenRecord } = result;
+
+      logger.info('User and token created successfully', {
         userId: user.id,
         email: user.email,
         role: user.role,
-        operationId
-      });
-
-      // Generate verification token
-      logger.debug('Generating verification token', { userId: user.id, operationId });
-      const verificationToken = crypto.randomBytes(32).toString('hex');
-      const tokenRecord = await prisma.token.create({
-        data: {
-          token: verificationToken,
-          type: TokenType.EMAIL_VERIFICATION,
-          userId: user.id,
-          expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
-        }
-      });
-      
-      logger.debug('Token created in database', {
         tokenId: tokenRecord.id,
-        token: verificationToken,
-        userId: user.id,
-        expiresAt: tokenRecord.expiresAt,
-        operationId
+        operationId,
       });
 
       logger.info('Verification token created', {
         userId: user.id,
         tokenType: 'EMAIL_VERIFICATION',
         expiresIn: '24h',
-        operationId
+        operationId,
       });
 
       // Send verification email
       try {
         logger.debug('Sending verification email', { userId: user.id, email, operationId });
         await emailService.sendVerificationEmail(email, verificationToken);
-        logger.info('Verification email sent successfully', { userId: user.id, email, operationId });
+        logger.info('Verification email sent successfully', {
+          userId: user.id,
+          email,
+          operationId,
+        });
       } catch (error) {
         logger.error('Failed to send verification email', error as Error, {
           userId: user.id,
           email,
-          operationId
+          operationId,
         });
         // Continue with registration even if email fails
       }
@@ -113,9 +136,9 @@ class AuthService {
       // Generate JWT tokens for immediate login
       logger.debug('Generating JWT tokens for new user', {
         userId: user.id,
-        operationId
+        operationId,
       });
-      
+
       const payload = {
         userId: user.id,
         email: user.email,
@@ -128,7 +151,7 @@ class AuthService {
         userId: user.id,
         email: user.email,
         tokenGenerated: true,
-        operationId
+        operationId,
       });
 
       return {
@@ -148,7 +171,7 @@ class AuthService {
       logger.error('User registration failed', error as Error, {
         email,
         role,
-        operationId
+        operationId,
       });
       throw error;
     }
@@ -161,7 +184,7 @@ class AuthService {
     logger.info('User login process started', {
       email,
       rememberMe,
-      operationId
+      operationId,
     });
 
     try {
@@ -178,7 +201,7 @@ class AuthService {
           phone: true,
           role: true,
           isVerified: true,
-        }
+        },
       });
 
       if (!user || !user.passwordHash) {
@@ -190,7 +213,7 @@ class AuthService {
         userId: user.id,
         email: user.email,
         isVerified: user.isVerified,
-        operationId
+        operationId,
       });
 
       // Check password
@@ -199,7 +222,7 @@ class AuthService {
         logger.warn('Login attempt with invalid password', {
           userId: user.id,
           email,
-          operationId
+          operationId,
         });
         throw new Error('Invalid email or password');
       }
@@ -207,16 +230,16 @@ class AuthService {
       logger.info('Password verified successfully', {
         userId: user.id,
         email,
-        operationId
+        operationId,
       });
 
       // Generate JWT tokens
       logger.debug('Generating JWT tokens', {
         userId: user.id,
         rememberMe,
-        operationId
+        operationId,
       });
-      
+
       const payload = {
         userId: user.id,
         email: user.email,
@@ -230,7 +253,7 @@ class AuthService {
         email,
         isVerified: user.isVerified,
         tokenGenerated: true,
-        operationId
+        operationId,
       });
 
       return {
@@ -249,7 +272,7 @@ class AuthService {
     } catch (error) {
       logger.error('User login failed', error as Error, {
         email,
-        operationId
+        operationId,
       });
       throw error;
     }
@@ -260,21 +283,21 @@ class AuthService {
 
     logger.info('Email verification process started', {
       tokenLength: token?.length,
-      operationId
+      operationId,
     });
 
     try {
       logger.debug('Looking up verification token', { operationId });
       const tokenRecord = await prisma.token.findUnique({
         where: { token },
-        include: { user: true }
+        include: { user: true },
       });
 
       if (!tokenRecord || tokenRecord.type !== TokenType.EMAIL_VERIFICATION) {
         logger.warn('Invalid verification token provided', {
           tokenExists: !!tokenRecord,
           tokenType: tokenRecord?.type,
-          operationId
+          operationId,
         });
         throw new Error('Invalid verification token');
       }
@@ -283,7 +306,7 @@ class AuthService {
         logger.warn('Expired verification token used', {
           userId: tokenRecord.userId,
           expiresAt: tokenRecord.expiresAt,
-          operationId
+          operationId,
         });
         throw new Error('Verification token has expired');
       }
@@ -291,42 +314,42 @@ class AuthService {
       logger.debug('Valid token found, updating user verification status', {
         userId: tokenRecord.userId,
         email: tokenRecord.user.email,
-        operationId
+        operationId,
       });
 
       // Update user as verified
       await prisma.user.update({
         where: { id: tokenRecord.userId },
-        data: { isVerified: true }
+        data: { isVerified: true },
       });
 
       logger.info('User email verified successfully', {
         userId: tokenRecord.userId,
         email: tokenRecord.user.email,
-        operationId
+        operationId,
       });
 
       // Delete used token
       logger.debug('Deleting used verification token', {
         tokenId: tokenRecord.id,
         userId: tokenRecord.userId,
-        operationId
+        operationId,
       });
-      
+
       await prisma.token.delete({
-        where: { id: tokenRecord.id }
+        where: { id: tokenRecord.id },
       });
 
       logger.info('Email verification completed successfully', {
         userId: tokenRecord.userId,
-        operationId
+        operationId,
       });
 
       return { userId: tokenRecord.userId };
     } catch (error) {
       logger.error('Email verification failed', error as Error, {
         tokenLength: token?.length,
-        operationId
+        operationId,
       });
       throw error;
     }
@@ -337,19 +360,19 @@ class AuthService {
 
     logger.info('Password reset request started', {
       email,
-      operationId
+      operationId,
     });
 
     try {
       logger.debug('Looking up user for password reset', { email, operationId });
       const user = await prisma.user.findUnique({
-        where: { email }
+        where: { email },
       });
 
       if (!user) {
         logger.info('Password reset requested for non-existent email', {
           email,
-          operationId
+          operationId,
         });
         // Don't reveal if email exists
         return;
@@ -358,7 +381,7 @@ class AuthService {
       logger.debug('User found, generating reset token', {
         userId: user.id,
         email,
-        operationId
+        operationId,
       });
 
       // Generate reset token
@@ -369,7 +392,7 @@ class AuthService {
           type: TokenType.PASSWORD_RESET,
           userId: user.id,
           expiresAt: new Date(Date.now() + 60 * 60 * 1000), // 1 hour
-        }
+        },
       });
 
       logger.info('Password reset token created', {
@@ -377,7 +400,7 @@ class AuthService {
         email,
         tokenType: 'PASSWORD_RESET',
         expiresIn: '1h',
-        operationId
+        operationId,
       });
 
       // Send reset email
@@ -385,19 +408,19 @@ class AuthService {
         logger.debug('Sending password reset email', {
           userId: user.id,
           email,
-          operationId
+          operationId,
         });
         await emailService.sendPasswordResetEmail(email, resetToken);
         logger.info('Password reset email sent successfully', {
           userId: user.id,
           email,
-          operationId
+          operationId,
         });
       } catch (error) {
         logger.error('Failed to send password reset email', error as Error, {
           userId: user.id,
           email,
-          operationId
+          operationId,
         });
         // Don't throw error to avoid revealing if email exists
       }
@@ -405,12 +428,12 @@ class AuthService {
       logger.info('Password reset request completed', {
         userId: user.id,
         email,
-        operationId
+        operationId,
       });
     } catch (error) {
       logger.error('Password reset request failed', error as Error, {
         email,
-        operationId
+        operationId,
       });
       throw error;
     }
@@ -421,12 +444,12 @@ class AuthService {
 
     logger.info('Resend verification email request started', {
       email,
-      operationId
+      operationId,
     });
 
     try {
       const user = await prisma.user.findUnique({
-        where: { email }
+        where: { email },
       });
 
       if (!user) {
@@ -441,8 +464,8 @@ class AuthService {
       await prisma.token.deleteMany({
         where: {
           userId: user.id,
-          type: TokenType.EMAIL_VERIFICATION
-        }
+          type: TokenType.EMAIL_VERIFICATION,
+        },
       });
 
       // Generate new verification token
@@ -453,7 +476,7 @@ class AuthService {
           type: TokenType.EMAIL_VERIFICATION,
           userId: user.id,
           expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
-        }
+        },
       });
 
       // Send verification email
@@ -462,12 +485,12 @@ class AuthService {
       logger.info('Verification email resent successfully', {
         userId: user.id,
         email,
-        operationId
+        operationId,
       });
     } catch (error) {
       logger.error('Resend verification email failed', error as Error, {
         email,
-        operationId
+        operationId,
       });
       throw error;
     }
@@ -479,20 +502,20 @@ class AuthService {
 
     logger.info('Password reset confirmation started', {
       tokenLength: token?.length,
-      operationId
+      operationId,
     });
 
     try {
       logger.debug('Looking up password reset token', { operationId });
       const tokenRecord = await prisma.token.findUnique({
-        where: { token }
+        where: { token },
       });
 
       if (!tokenRecord || tokenRecord.type !== TokenType.PASSWORD_RESET) {
         logger.warn('Invalid password reset token provided', {
           tokenExists: !!tokenRecord,
           tokenType: tokenRecord?.type,
-          operationId
+          operationId,
         });
         throw new Error('Invalid reset token');
       }
@@ -501,14 +524,14 @@ class AuthService {
         logger.warn('Expired password reset token used', {
           userId: tokenRecord.userId,
           expiresAt: tokenRecord.expiresAt,
-          operationId
+          operationId,
         });
         throw new Error('Reset token has expired');
       }
 
       logger.debug('Valid reset token found, hashing new password', {
         userId: tokenRecord.userId,
-        operationId
+        operationId,
       });
 
       // Hash new password
@@ -516,41 +539,41 @@ class AuthService {
 
       logger.debug('Updating user password', {
         userId: tokenRecord.userId,
-        operationId
+        operationId,
       });
 
       // Update user password
       await prisma.user.update({
         where: { id: tokenRecord.userId },
-        data: { passwordHash }
+        data: { passwordHash },
       });
 
       logger.info('User password updated successfully', {
         userId: tokenRecord.userId,
-        operationId
+        operationId,
       });
 
       // Delete used token
       logger.debug('Deleting used reset token', {
         tokenId: tokenRecord.id,
         userId: tokenRecord.userId,
-        operationId
+        operationId,
       });
-      
+
       await prisma.token.delete({
-        where: { id: tokenRecord.id }
+        where: { id: tokenRecord.id },
       });
 
       logger.info('Password reset completed successfully', {
         userId: tokenRecord.userId,
-        operationId
+        operationId,
       });
 
       return { userId: tokenRecord.userId };
     } catch (error) {
       logger.error('Password reset failed', error as Error, {
         tokenLength: token?.length,
-        operationId
+        operationId,
       });
       throw error;
     }
