@@ -30,7 +30,6 @@ coverage/
 *.lcov
 
 # IDE
-.vscode/
 .idea/
 *.swp
 *.swo
