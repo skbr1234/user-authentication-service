@@ -31,7 +31,7 @@ class AuthController {
       
       res.status(201).json({
         message: 'Registration successful. Please check your email for verification.',
-        user: result.user
+        ...result
       });
     } catch (error: any) {
       const duration = Date.now() - startTime;

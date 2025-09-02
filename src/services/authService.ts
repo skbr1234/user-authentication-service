@@ -8,7 +8,7 @@ import { logger } from '../utils/logger';
 import crypto from 'crypto';
 
 class AuthService {
-  async register(userData: RegisterRequest): Promise<{ user: any }> {
+  async register(userData: RegisterRequest): Promise<AuthResponse> {
     const { email, password, firstName, lastName, phone, role } = userData;
     const operationId = crypto.randomUUID();
 
@@ -110,13 +110,40 @@ class AuthService {
         // Continue with registration even if email fails
       }
 
+      // Generate JWT tokens for immediate login
+      logger.debug('Generating JWT tokens for new user', {
+        userId: user.id,
+        operationId
+      });
+      
+      const payload = {
+        userId: user.id,
+        email: user.email,
+      };
+
+      const token = generateToken(payload, false);
+      const refreshToken = generateRefreshToken(payload);
+
       logger.info('User registration completed successfully', {
         userId: user.id,
         email: user.email,
+        tokenGenerated: true,
         operationId
       });
 
-      return { user };
+      return {
+        user: {
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName || undefined,
+          lastName: user.lastName || undefined,
+          phone: user.phone || undefined,
+          role: user.role === 'BUYER_RENTER' ? 'buyer_renter' : 'seller_landlord',
+          isVerified: user.isVerified,
+        },
+        token,
+        refreshToken,
+      };
     } catch (error) {
       logger.error('User registration failed', error as Error, {
         email,
