@@ -59,7 +59,7 @@ class EmailService {
       });
 
       const t = translationService.getEmailTranslations(detectedLocale);
-      const verificationUrl = `${process.env.CLIENT_URL}/verify-email?token=${token}`;
+      const verificationUrl = `${process.env.CLIENT_URL}/verify-email/${token}`;
       const isRTL = detectedLocale === 'ar';
       
       const mailOptions = {
@@ -137,7 +137,7 @@ class EmailService {
       });
 
       const t = translationService.getEmailTranslations(detectedLocale);
-      const resetUrl = `${process.env.CLIENT_URL}/reset-password?token=${token}`;
+      const resetUrl = `${process.env.CLIENT_URL}/reset-password/${token}`;
       const isRTL = detectedLocale === 'ar';
       
       const mailOptions = {

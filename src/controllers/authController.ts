@@ -157,6 +157,41 @@ class AuthController {
     }
   }
 
+  async resendVerificationEmail(req: Request, res: Response): Promise<void> {
+    const requestId = crypto.randomUUID();
+    const startTime = Date.now();
+    
+    try {
+      const { email } = req.body;
+      
+      logger.info('Resend verification email request started', {
+        email,
+        userAgent: req.get('User-Agent'),
+        ip: req.ip
+      }, { requestId });
+      
+      await authService.resendVerificationEmail(email);
+      
+      const duration = Date.now() - startTime;
+      logger.info('Resend verification email completed', {
+        email,
+        duration
+      }, { requestId });
+      
+      res.json({ message: 'Verification email sent successfully' });
+    } catch (error: any) {
+      const duration = Date.now() - startTime;
+      logger.error('Resend verification email failed', error, {
+        email: req.body?.email,
+        duration,
+        userAgent: req.get('User-Agent'),
+        ip: req.ip
+      }, { requestId });
+      
+      res.status(400).json({ error: error.message });
+    }
+  }
+
   async resetPassword(req: Request, res: Response): Promise<void> {
     const requestId = crypto.randomUUID();
     const startTime = Date.now();

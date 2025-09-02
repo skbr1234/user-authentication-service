@@ -26,3 +26,7 @@ export const passwordResetConfirmSchema = Joi.object({
   token: Joi.string().required(),
   newPassword: Joi.string().min(8).pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/).required(),
 });
+
+export const resendVerificationSchema = Joi.object({
+  email: Joi.string().email().required(),
+});

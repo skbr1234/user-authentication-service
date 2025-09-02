@@ -72,13 +72,21 @@ class AuthService {
       // Generate verification token
       logger.debug('Generating verification token', { userId: user.id, operationId });
       const verificationToken = crypto.randomBytes(32).toString('hex');
-      await prisma.token.create({
+      const tokenRecord = await prisma.token.create({
         data: {
           token: verificationToken,
           type: TokenType.EMAIL_VERIFICATION,
           userId: user.id,
           expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
         }
+      });
+      
+      logger.debug('Token created in database', {
+        tokenId: tokenRecord.id,
+        token: verificationToken,
+        userId: user.id,
+        expiresAt: tokenRecord.expiresAt,
+        operationId
       });
 
       logger.info('Verification token created', {
@@ -374,6 +382,63 @@ class AuthService {
       });
     } catch (error) {
       logger.error('Password reset request failed', error as Error, {
+        email,
+        operationId
+      });
+      throw error;
+    }
+  }
+
+  async resendVerificationEmail(email: string): Promise<void> {
+    const operationId = crypto.randomUUID();
+
+    logger.info('Resend verification email request started', {
+      email,
+      operationId
+    });
+
+    try {
+      const user = await prisma.user.findUnique({
+        where: { email }
+      });
+
+      if (!user) {
+        throw new Error('User not found');
+      }
+
+      if (user.isVerified) {
+        throw new Error('Email is already verified');
+      }
+
+      // Delete existing verification tokens
+      await prisma.token.deleteMany({
+        where: {
+          userId: user.id,
+          type: TokenType.EMAIL_VERIFICATION
+        }
+      });
+
+      // Generate new verification token
+      const verificationToken = crypto.randomBytes(32).toString('hex');
+      await prisma.token.create({
+        data: {
+          token: verificationToken,
+          type: TokenType.EMAIL_VERIFICATION,
+          userId: user.id,
+          expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
+        }
+      });
+
+      // Send verification email
+      await emailService.sendVerificationEmail(email, verificationToken);
+
+      logger.info('Verification email resent successfully', {
+        userId: user.id,
+        email,
+        operationId
+      });
+    } catch (error) {
+      logger.error('Resend verification email failed', error as Error, {
         email,
         operationId
       });

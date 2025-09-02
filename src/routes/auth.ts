@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { authController } from '../controllers/authController';
 import { validateRequest } from '../middleware/validation';
-import { registerSchema, loginSchema, passwordResetSchema, passwordResetConfirmSchema } from '../utils/validators';
+import { registerSchema, loginSchema, passwordResetSchema, passwordResetConfirmSchema, resendVerificationSchema } from '../utils/validators';
 
 const router = Router();
 
@@ -13,6 +13,7 @@ router.post('/login', validateRequest(loginSchema), authController.login);
 
 // Email verification
 router.get('/verify-email/:token', authController.verifyEmail);
+router.post('/resend-verification', validateRequest(resendVerificationSchema), authController.resendVerificationEmail);
 
 // Password reset request
 router.post('/forgot-password', validateRequest(passwordResetSchema), authController.forgotPassword);
