@@ -2,7 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
-import { config } from './config/environment';
+
 import authRoutes from './routes/auth';
 import prisma from './config/database';
 import { logger } from './utils/logger';
@@ -140,7 +140,7 @@ app.use('*', (req, res) => {
 });
 
 // Error handler
-app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+app.use((err: any, req: express.Request, res: express.Response, _next: express.NextFunction) => {
   const requestId = (req as any).requestId || crypto.randomUUID();
   
   logger.error('Unhandled application error', err, {

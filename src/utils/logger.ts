@@ -54,7 +54,7 @@ class Logger {
         error: {
           name: error.name,
           message: error.message,
-          stack: error.stack
+          stack: error.stack ?? ''
         }
       }),
       ...(context?.requestId && { requestId: context.requestId }),

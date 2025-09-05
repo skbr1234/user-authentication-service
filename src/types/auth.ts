@@ -24,10 +24,10 @@ export interface AuthResponse {
   user: {
     id: string;
     email: string;
-    firstName?: string;
-    lastName?: string;
-    phone?: string;
-    role?: string;
+    firstName?: string | undefined;
+    lastName?: string | undefined;
+    phone?: string | undefined;
+    role?: string | undefined;
     isVerified: boolean;
   };
   token: string;

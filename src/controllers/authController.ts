@@ -94,8 +94,12 @@ class AuthController {
     try {
       const { token } = req.params;
       
+      if (!token) {
+        throw new Error('Token is required');
+      }
+      
       logger.info('Email verification attempt started', {
-        tokenLength: token?.length,
+        tokenLength: token.length,
         userAgent: req.get('User-Agent'),
         ip: req.ip
       }, { requestId });
@@ -128,6 +132,10 @@ class AuthController {
     
     try {
       const { email }: PasswordResetRequest = req.body;
+      
+      if (!email) {
+        throw new Error('Email is required');
+      }
       
       logger.info('Password reset request started', {
         email,

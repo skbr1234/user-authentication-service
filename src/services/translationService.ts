@@ -68,15 +68,15 @@ class TranslationService {
   getEmailTranslations(locale: string = 'en'): EmailTranslations {
     logger.debug('Getting email translations', { locale, available: Object.keys(translations) });
     
-    const translation = translations[locale] || translations.en;
-    const usedLocale = translations[locale] ? locale : 'en';
+    const translation = translations[locale];
     
-    if (usedLocale !== locale) {
+    if (!translation) {
       logger.warn('Requested locale not available, falling back to English', {
         requestedLocale: locale,
-        usedLocale,
+        usedLocale: 'en',
         availableLocales: Object.keys(translations)
       });
+      return translations.en!;
     }
     
     return translation;
