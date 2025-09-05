@@ -4,7 +4,7 @@ export interface RegisterRequest {
   firstName: string;
   lastName: string;
   phone?: string;
-  role: 'buyer_renter' | 'seller_landlord';
+  role: 'user' | 'admin';
 }
 
 export interface LoginRequest {

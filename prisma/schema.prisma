@@ -14,7 +14,7 @@ model User {
   firstName     String?
   lastName      String?
   phone         String?
-  role          UserRole  @default(BUYER_RENTER)
+  role          UserRole  @default(USER)
   isVerified    Boolean   @default(false)
   provider      String    @default("email") // email, google, apple
   providerId    String?
@@ -61,6 +61,6 @@ enum TokenType {
 }
 
 enum UserRole {
-  BUYER_RENTER
-  SELLER_LANDLORD
+  USER
+  ADMIN
 }
